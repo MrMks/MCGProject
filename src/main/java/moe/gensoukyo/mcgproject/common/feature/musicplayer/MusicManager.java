@@ -11,17 +11,17 @@ public class MusicManager implements IMusicManager {
     protected final HashMap<UUID, String> entityMap = new HashMap<>();
 
     @Override
-    public String playNew(UUID uuid, String fullPath, World world, double x, double y, double z) {
-        return playNew(uuid,fullPath,world,x,y,z,0);
+    public String playNew(UUID uuid, IStream stream, World world, double x, double y, double z) {
+        return playNew(uuid,stream,world,x,y,z,0);
     }
 
     @Override
-    public String playNew(UUID uuid, String fullPath, World world, double x, double y, double z, int start) {
+    public String playNew(UUID uuid, IStream stream, World world, double x, double y, double z, int start) {
         if (entityMap.containsKey(uuid)) {
             map.remove(entityMap.remove(uuid));
         }
-        IMusic music = new Music(fullPath, start, world, x ,y, z);
-        String mUUID = UUID.randomUUID().toString().replace("-", "");
+        IMusic music = new Music(stream, start, world, x ,y, z);
+        String mUUID = UUID.randomUUID().toString();
         map.put(mUUID, music);
         entityMap.put(uuid, mUUID);
         return mUUID;
@@ -55,7 +55,7 @@ public class MusicManager implements IMusicManager {
     @Override
     public void closePlaying(String hash) {
         entityMap.values().removeIf(v-> v.equals(hash));
-        map.keySet().removeIf(v-> v.equals(hash));
+        map.remove(hash);
     }
 
     @Override
@@ -73,5 +73,10 @@ public class MusicManager implements IMusicManager {
     public int getPosition(String hash) {
         if (map.containsKey(hash)) return map.get(hash).getStart();
         return 0;
+    }
+
+    @Override
+    public void setPosition(String hash, int pos) {
+        if (map.containsKey(hash)) map.get(hash).updateStart(pos);
     }
 }

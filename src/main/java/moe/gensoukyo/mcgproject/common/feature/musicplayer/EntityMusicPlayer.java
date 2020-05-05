@@ -25,16 +25,17 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
+import java.net.URL;
 import java.util.ArrayList;
 
 @MCGEntity("music_player")
 public class EntityMusicPlayer extends EntityMinecart {
 
-    public static final DataParameter<Boolean> IS_PLAYING = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.BOOLEAN);
-    public static final DataParameter<String> URL = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.STRING);
-    public static final DataParameter<String> OWNER = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.STRING);
-    public static final DataParameter<Float> VOLUME = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.FLOAT);
-    public static final DataParameter<Boolean> IMMERSIVE = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.BOOLEAN);
+    private static final DataParameter<Boolean> IS_PLAYING = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.BOOLEAN);
+    private static final DataParameter<String> URL = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.STRING);
+    private static final DataParameter<String> OWNER = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.STRING);
+    private static final DataParameter<Float> VOLUME = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.FLOAT);
+    private static final DataParameter<Boolean> IMMERSIVE = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.BOOLEAN);
 
     public boolean isPlaying;
     public String streamURL = "";
@@ -113,6 +114,10 @@ public class EntityMusicPlayer extends EntityMinecart {
     @Override
     public void onUpdate() {
         super.onUpdate();
+        if (!world.isRemote) {
+            String url = dataManager.get(URL);
+
+        }
         if (world.isRemote && this.ticksExisted % 5 == 0) {
             this.immersive = this.dataManager.get(IMMERSIVE);
             boolean d_isPlaying = dataManager.get(IS_PLAYING);
@@ -160,7 +165,7 @@ public class EntityMusicPlayer extends EntityMinecart {
             this.isPlaying = true;
             IMusicManager manager = MCGProject.proxy.getMusicManager();
             manager.closeAll(getUniqueID());
-            musicCode = manager.playNew(getUniqueID(), this.streamURL, world, posX, posY, posZ);
+            manager.playNew(getUniqueID(), ()->new URL(streamURL).openStream(), world, posX, posY, posZ);
             manager.changeMaxVolume(musicCode, 0);
             manager.updateVolume(musicCode);
         }
@@ -224,6 +229,7 @@ public class EntityMusicPlayer extends EntityMinecart {
     }
 
     /**
+     * @author MrMks
      * 注意，isPlaying() 指示 这个实体在逻辑服务端是否正在播放音频，而并非本地是否正在播放音频
      * 故此当本地音频完全播放并结束后，该值仍为true
      * @return true if the entity is playing audio on logic server
@@ -232,6 +238,12 @@ public class EntityMusicPlayer extends EntityMinecart {
         return isPlaying && dataManager.get(IS_PLAYING);
     }
 
+    public String getOwner(){
+        return owner == null ? "" : owner;
+    }
+
+
+
     //TODO：bgm模式（到达位置播放）和dj模式(同步播放) DISCARD
-    
+
 }
