@@ -11,5 +11,6 @@ public interface IMusic {
     void setMaxVolume(float max);
     float getVolume(World world, double x, double y, double z);
     int getStart();
-    World getWorld();
+    void updateStart(int start);
+    boolean matchWorld(World world);
 }

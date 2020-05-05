@@ -4,17 +4,16 @@ import net.minecraft.world.World;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 
 public class Music implements IMusic {
-    private final String url;
-    private World world;
+    private final IStream stream;
+    private String world;
     private double v,x,y,z;
-    private final int start;
-    public Music(String url, int start, World world, double x, double y, double z){
-        this.url = url;
+    private int start;
+    public Music(IStream stream, int start, World world, double x, double y, double z){
+        this.stream = stream;
         this.v = 0;
-        this.world = world;
+        this.world = world.getWorldInfo().getWorldName();
         this.x = x;
         this.y = y;
         this.z = z;
@@ -23,7 +22,7 @@ public class Music implements IMusic {
 
     @Override
     public void update(World world, double x, double y, double z) {
-        this.world = world;
+        this.world = world.getWorldInfo().getWorldName();
         this.x = x;
         this.y = y;
         this.z = z;
@@ -31,7 +30,7 @@ public class Music implements IMusic {
 
     @Override
     public InputStream openStream() throws IOException {
-        return new URL(url).openStream();
+        return stream.openStream();
     }
 
     @Override
@@ -43,9 +42,9 @@ public class Music implements IMusic {
     public float getVolume(World world, double x, double y, double z) {
         float volume = (float) v;
         float distanceSq = (float) getDistanceSq(x, y, z);
-        if (!world.equals(this.world)) volume = 0;
+        if (!matchWorld(world)) volume = 0;
         if (volume != 0) {
-            float n = (1 + volume) * 20;
+            float n = (volume) * 40;
             float nn = n * n;
             float v;
             if (distanceSq <= nn) {
@@ -65,8 +64,13 @@ public class Music implements IMusic {
     }
 
     @Override
-    public World getWorld() {
-        return world;
+    public void updateStart(int start) {
+        this.start = start;
+    }
+
+    @Override
+    public boolean matchWorld(World world) {
+        return world.getWorldInfo().getWorldName().equals(this.world);
     }
 
     protected double getDistanceSq(double x, double y, double z){

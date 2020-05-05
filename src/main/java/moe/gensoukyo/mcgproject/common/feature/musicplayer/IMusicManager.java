@@ -7,22 +7,24 @@ import java.util.UUID;
 
 public interface IMusicManager {
     /**
-     * equal to playNew(uuid, fullPath, x, y, z, 0)
-     * {@link IMusicManager#playNew(UUID, String, World, double, double, double, int)}
+     * equal to playNew(uuid, stream, x, y, z, 0)
+     * {@link IMusicManager#playNew(UUID, IStream, World, double, double, double, int)}
+     * @return
      */
-    String playNew(UUID uuid, String fullPath, World world, double x, double y, double z);
+    String playNew(UUID uuid, IStream stream, World world, double x, double y, double z);
 
     /**
      * generate a new IMusic
      * @param uuid uuid of the EntityMusicPlayer
-     * @param fullPath the fullPath of the .mp3 file
+     * @param stream the stream to play
+     * @param world the world the Entity in
      * @param x posX of entity
      * @param y posY of entity
      * @param z posZ of entity
      * @param start the first frame to play
      * @return a string use to identify the music
      */
-    String playNew(UUID uuid, String fullPath, World world, double x, double y, double z, int start);
+    String playNew(UUID uuid, IStream stream, World world, double x, double y, double z, int start);
 
     boolean isExist(@Nullable String hash);
     boolean isPlaying(String hash);
@@ -36,4 +38,13 @@ public interface IMusicManager {
     void closeAll();
 
     int getPosition(String hash);
+
+    /**
+     * notice that this method is prepared for sync-player
+     * this method will set the start on server
+     * this will do not update the musicPlayer on server
+     * @param hash the uuid of the IMusic
+     * @param pos the position of IMusic need to be
+     */
+    void setPosition(String hash, int pos);
 }
