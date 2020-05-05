@@ -361,7 +361,7 @@ public class GuiMusicPlayer extends GuiScreen {
 			String[] args = input.split("\\?");
 			if (args.length > 1) {
 				String id = getArg(args[1], "id");
-				return NETEASE_URL + id + ".mp3";
+				return NETEASE_URL + id + (id.endsWith(".mp3") ? "" : ".mp3");
 			}
 		}
 		return input;
