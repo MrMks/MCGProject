@@ -24,6 +24,16 @@ public class MusicPlayerPacket implements IMessage {
 
 	public MusicPlayerPacket() {}
 
+	public MusicPlayerPacket(int entityID, boolean isPlaying, String url, float volume, String owner, boolean immersive) {
+		this.entityID = entityID;
+		this.isPlaying = isPlaying;
+		this.url = url;
+		this.volume = volume;
+		this.owner = owner;
+		this.immersive = immersive;
+	}
+
+	/*
 	public MusicPlayerPacket(EntityMusicPlayer musicPlayer) {
 		this.entityID = musicPlayer.getEntityId();
 		this.url = musicPlayer.streamURL;
@@ -32,6 +42,8 @@ public class MusicPlayerPacket implements IMessage {
 		this.owner = musicPlayer.owner;
 		this.immersive = musicPlayer.immersive;
 	}
+
+	 */
 
 	@Override
 	public void fromBytes(ByteBuf buf) {

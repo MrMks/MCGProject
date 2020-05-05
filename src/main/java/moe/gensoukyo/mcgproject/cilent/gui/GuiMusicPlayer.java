@@ -1,6 +1,7 @@
 package moe.gensoukyo.mcgproject.cilent.gui;
 
 import moe.gensoukyo.mcgproject.common.feature.musicplayer.EntityMusicPlayer;
+import moe.gensoukyo.mcgproject.common.network.MusicPlayerGuiClosePackage;
 import moe.gensoukyo.mcgproject.common.network.MusicPlayerPacket;
 import moe.gensoukyo.mcgproject.common.network.NetworkWrapper;
 import moe.gensoukyo.mcgproject.common.util.MathMCG;
@@ -9,12 +10,12 @@ import moe.gensoukyo.mcgproject.core.MCGProject;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
@@ -67,12 +68,12 @@ public class GuiMusicPlayer extends GuiScreen {
 		buttonList.add(new GuiButton(5, this.width / 2 + 50, this.height / 2 + 30, 20, 20, "-"));
 		streamTextBox = new GuiTCTextField(this.fontRenderer, this.width / 2 - (gui_width) / 2 + 10, this.height / 2 - gui_height / 2 + 50, gui_width - 16, 16);
 		streamTextBox.setMaxStringLength(1000);
-		streamTextBox.setText(musicPlayer.streamURL);
+		streamTextBox.setText(musicPlayer.getStreamURL());
 		//Localizations
 		Keyboard.enableRepeatEvents(true);
 		int var1 = (this.width - gui_width) / 2;
 		int var2 = (this.height - gui_height) / 2;
-		if (musicPlayer.owner.isEmpty()) {
+		if (musicPlayer.getOwner().isEmpty()) {
 			this.buttonList.add(new GuiButton(3, var1 + gui_width - 350, var2 - 10, 51, 10, "未锁定"));
 		}
 		else {
@@ -85,6 +86,7 @@ public class GuiMusicPlayer extends GuiScreen {
 	@Override
 	public void onGuiClosed() {
 		Keyboard.enableRepeatEvents(false);
+		NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerGuiClosePackage());
 	}
 
 	@Override
@@ -95,7 +97,7 @@ public class GuiMusicPlayer extends GuiScreen {
 		int var8 = (this.height) / 2 + gui_height / 2;
 
 		drawRect(var5 + 2, var6 + 2, var7 + 2, var8 + 2, 0xffc6c6c6);
-		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
 		mc.renderEngine.bindTexture(new ResourceLocation(MCGProject.ID, "textures/gui/" + "gui_jukebox.png"));
 
 		drawSquareCorners(2, 2, var5, var6, var7, var8, 0, 0);
@@ -116,7 +118,7 @@ public class GuiMusicPlayer extends GuiScreen {
 		//fontRenderer.drawString("Date: " + Calendar.getInstance().get(Calendar.MONTH) + " " + Calendar.getInstance().get(Calendar.DATE), var5 - gui_width / 2, var6 - 30, 0xffffffff);
 		
 		if((Minecraft.getMinecraft().player != null) && musicPlayer.isPlaying()) {
-			fontRenderer.drawString("音量: " + Math.round(musicPlayer.volume * 100), width / 2 - 26, height / 2 + 18, 0xff0e0e0e);
+			fontRenderer.drawString("音量: " + Math.round(musicPlayer.getVolume() * 100), width / 2 - 26, height / 2 + 18, 0xff0e0e0e);
 		}
 		else {
 			fontRenderer.drawString("音量: 0", width / 2 - 26, height / 2 + 18, 0xff0e0e0e);
@@ -188,6 +190,7 @@ public class GuiMusicPlayer extends GuiScreen {
 	}
 
 	protected String parseURL(String url) {
+		if (url == null) url = "";
 		if (url.toLowerCase().contains(".m3u"))
 			return takeFirstEntryFromM3U(url);
 		if (url.toLowerCase().contains(".pls"))
@@ -199,23 +202,26 @@ public class GuiMusicPlayer extends GuiScreen {
 		return url;
 	}
 
+	/**
+	 * update MrMks 2020/5/5
+	 * Gui类不应该直接操作到实体数据，这一部分的操作应该由发包和数据同步来实现，故讲该方法中能够直接操作到实体数据的语句去除。
+	 * 相应的数据检查及操作将在EntityMusicPlayer#onUpdate()中进行。
+	 * @see EntityMusicPlayer
+	 */
 	@Override
 	protected void actionPerformed(GuiButton button) {
+		boolean isPlaying = musicPlayer.isPlaying();
+		int entityId = musicPlayer.getEntityId();
+		String url = parseURL(streamTextBox.getText());
+		String owner = musicPlayer.getOwner();
+		boolean imm = musicPlayer.isImmersive();
+		float volume = musicPlayer.getVolume();
+
+		boolean update = false;
+
 		if (button.id == 0) {
-			if (streamTextBox.getText() != null && streamTextBox.getText().length() > 0) {
-				if (!musicPlayer.isPlaying()) {
-					musicPlayer.streamURL = parseURL(this.streamTextBox.getText());
-					musicPlayer.startStream();
-				}
-				else {
-					musicPlayer.stopStream();
-				}
-				NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(musicPlayer));
-			}
-			else if (musicPlayer.isPlaying()){
-				musicPlayer.stopStream();
-				NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(musicPlayer));
-			}
+			isPlaying = !isPlaying;
+			update = true;
 		}
 		else if (button.id == 1) {
 			Toolkit toolkit = Toolkit.getDefaultToolkit();
@@ -229,37 +235,37 @@ public class GuiMusicPlayer extends GuiScreen {
 			streamTextBox.setText("");
 			streamTextBox.setFocused(true);
 		}
-		else if (button.id == 4) {
-			if(musicPlayer.volume<1.0f) {
-				musicPlayer.volume += 0.1f;
-			}
-			NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(musicPlayer));
-		}
-		else if (button.id == 5) {
-			if(musicPlayer.volume>0.0f) {
-				musicPlayer.volume -= 0.1f;
-			}
-			NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(musicPlayer));
-		}
 		else if (button.id == 3) {
-			if (musicPlayer.owner.isEmpty()) {
-				musicPlayer.owner = player.getName();
+			if (owner.isEmpty()) {
+				owner = player.getName();
 				button.displayString = "已锁定";
 			} else {
-				musicPlayer.owner = "";
+				owner = "";
 				button.displayString = "未锁定";
 			}
-			NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(musicPlayer));
+			update = true;
+		}
+		else if (button.id == 4) {
+			volume = Math.min(volume + 0.1f, 1f);
+			update = true;
+		}
+		else if (button.id == 5) {
+			volume = Math.max(volume - 0.1f, 0f);
+			update = true;
 		}
 		else if (button.id == 6) {
 			streamTextBox.setText(NETEASE_URL + randomMusics.get(new Random().nextInt(randomMusics.size())) + ".mp3");
 		}
 		else if (button.id == 7) {
-			musicPlayer.immersive = !musicPlayer.immersive;
-			NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(musicPlayer));
+			imm = !imm;
+			update = true;
 		}
+
+		if (update)
+			NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(entityId, isPlaying, url, volume, owner, imm));
 	}
 
+	// Unused?
 	@SideOnly(Side.CLIENT)
 	public boolean getState() {
 		return musicPlayer.isPlaying();
@@ -272,7 +278,7 @@ public class GuiMusicPlayer extends GuiScreen {
 
 	protected void drawCreativeTabHoveringText(int t, int g) {
 		String state;
-		if (!musicPlayer.owner.isEmpty())
+		if (!musicPlayer.getOwner().isEmpty())
 			state = "已锁定";
 		else
 			state = "未锁定";
@@ -290,7 +296,7 @@ public class GuiMusicPlayer extends GuiScreen {
 		fontRenderer.drawStringWithShadow("主人和管理员可以", t + 15, g + 10 - 40, -1);
 		fontRenderer.drawStringWithShadow("打开GUI和破坏它", t + 15, g + 20 - 40, -1);
 		fontRenderer.drawStringWithShadow("当前状态: " + state, t + 15, g + 30 - 40, -1);
-		fontRenderer.drawStringWithShadow("主人: " + musicPlayer.owner, t + 15, g + 40 - 40, -1);
+		fontRenderer.drawStringWithShadow("主人: " + musicPlayer.getOwner(), t + 15, g + 40 - 40, -1);
 	}
 
 	public boolean intersectsWith(int mouseX, int mouseY) {
@@ -362,3 +368,5 @@ public class GuiMusicPlayer extends GuiScreen {
 	}
 
 }
+
+//TODO use localization Key instead hard-code

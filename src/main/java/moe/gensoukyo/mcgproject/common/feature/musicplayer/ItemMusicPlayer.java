@@ -54,8 +54,8 @@ public class ItemMusicPlayer extends Item {
             EntityMusicPlayer musicPlayer = new EntityMusicPlayer(worldIn,
                     (double)pos.getX() + 0.5D,
                     (double)pos.getY() + 0.0625D,
-                    (double)pos.getZ() + 0.5D);
-            musicPlayer.owner = player.getName();
+                    (double)pos.getZ() + 0.5D,
+                    player.getName());
 
             if (stack.hasDisplayName())
                 musicPlayer.setCustomNameTag(stack.getDisplayName());

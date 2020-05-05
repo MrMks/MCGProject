@@ -1,6 +1,7 @@
-package moe.gensoukyo.mcgproject.common.feature.musicplayer;
+package moe.gensoukyo.mcgproject.cilent.feature.musicPlayer;
 
 import moe.gensoukyo.mcgproject.cilent.gui.GuiMusicPlayer;
+import moe.gensoukyo.mcgproject.common.feature.musicplayer.EntityMusicPlayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraftforge.fml.relauncher.Side;
