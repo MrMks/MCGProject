@@ -28,7 +28,7 @@ public class ClientMusicManager extends MusicManager {
 
         @Override
         public void onMusicStopped(String hash) {
-            playerMap.remove(hash);
+            closePlaying(hash);
         }
 
         @Override
@@ -42,7 +42,6 @@ public class ClientMusicManager extends MusicManager {
 
         @Override
         public void onMusicStarted(String hash) {
-            playerMap.remove(hash);
         }
 
     });

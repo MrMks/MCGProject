@@ -140,7 +140,7 @@ public class EntityMusicPlayer extends EntityMinecart {
             } else if (!isPlaying && d_isPlaying) {
                 this.startStream();
             }
-            IMusicManager manager = MCGProject.proxy.getMusicManager();
+            IMusicManager manager = MCGProject.proxy.getMusicManager(world.isRemote);
             if (manager.isPlaying(musicCode)) {
                 volume = dataManager.get(VOLUME);
                 manager.changeMaxVolume(musicCode, volume);
@@ -182,7 +182,7 @@ public class EntityMusicPlayer extends EntityMinecart {
                 this.isPlaying = true;
                 this.streamURL = dataManager.get(URL);
                 this.volume = dataManager.get(VOLUME);
-                IMusicManager manager = MCGProject.proxy.getMusicManager();
+                IMusicManager manager = MCGProject.proxy.getMusicManager(world.isRemote);
                 manager.closeAll(getUniqueID());
                 musicCode = manager.playNew(getUniqueID(), ()->new URL(streamURL).openStream(), world, posX, posY, posZ);
                 manager.changeMaxVolume(musicCode, volume);
@@ -198,7 +198,7 @@ public class EntityMusicPlayer extends EntityMinecart {
         if (world.isRemote) {
             if (this.isPlaying) {
                 this.isPlaying = false;
-                MCGProject.proxy.getMusicManager().closeAll(getUniqueID());
+                MCGProject.proxy.getMusicManager(true).closeAll(getUniqueID());
                 this.musicCode = null;
                 this.streamURL = "";
             }

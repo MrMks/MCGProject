@@ -22,7 +22,7 @@ public class StreamStopper {
     @SubscribeEvent
     public void onWorldUnload(WorldEvent.Unload event) {
         if (event.getWorld().isRemote) {
-            MCGProject.proxy.getMusicManager().closeAll();
+            MCGProject.proxy.getMusicManager(event.getWorld().isRemote).closeAll();
         }
     }
 }

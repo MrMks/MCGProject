@@ -5,6 +5,7 @@ import moe.gensoukyo.mcgproject.cilent.feature.ItitFeatures;
 import moe.gensoukyo.mcgproject.cilent.feature.musicPlayer.ClientMusicManager;
 import moe.gensoukyo.mcgproject.cilent.feature.musicPlayer.StreamStopper;
 import moe.gensoukyo.mcgproject.cilent.init.ModelMapper;
+import moe.gensoukyo.mcgproject.common.feature.musicplayer.EmptyMusicManager;
 import moe.gensoukyo.mcgproject.common.feature.musicplayer.IMusicManager;
 import moe.gensoukyo.mcgproject.common.feature.rsgauges.ModRsGauges;
 import net.minecraftforge.common.MinecraftForge;
@@ -52,9 +53,15 @@ public class ClientProxy extends CommonProxy {
         ModRsGauges.client.postInit(event);
     }
 
+    private IMusicManager serverMusicManager;
     @Override
-    public IMusicManager getMusicManager() {
-        if (musicManager == null) musicManager = new ClientMusicManager();
-        return musicManager;
+    public IMusicManager getMusicManager(boolean isRemote) {
+        if (isRemote) {
+            if (musicManager == null) musicManager = new ClientMusicManager();
+            return musicManager;
+        } else {
+            if (serverMusicManager == null) serverMusicManager = new EmptyMusicManager();
+            return serverMusicManager;
+        }
     }
 }

@@ -56,7 +56,7 @@ public class CommonProxy {
 
     }
 
-    public IMusicManager getMusicManager(){
+    public IMusicManager getMusicManager(boolean isRemote){
         if (musicManager == null) musicManager = new EmptyMusicManager();
         return musicManager;
     }
