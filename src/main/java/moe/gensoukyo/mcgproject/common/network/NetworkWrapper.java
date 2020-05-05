@@ -27,6 +27,9 @@ public class NetworkWrapper {
         INSTANCE.registerMessage(MusicPlayerGuiHandler.class, MusicPlayerGuiPacket.class, 6, Side.CLIENT);
         ModRsGauges.INSTANCE.initNetwork(INSTANCE, 7);
 
+        // MrMks 2020/5/5
+        INSTANCE.registerMessage(MusicPlayerGuiClosePackage.MusicPlayerGuiCloseHandler.class, MusicPlayerGuiClosePackage.class, 8, Side.SERVER);
+
     }
 
 }

@@ -1,6 +1,6 @@
 package moe.gensoukyo.mcgproject.common.network;
 
-import moe.gensoukyo.mcgproject.common.feature.musicplayer.DisplayGuiScreenTask;
+import moe.gensoukyo.mcgproject.cilent.feature.musicPlayer.DisplayGuiScreenTask;
 import moe.gensoukyo.mcgproject.common.feature.musicplayer.EntityMusicPlayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;

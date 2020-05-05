@@ -6,7 +6,7 @@ import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.UUID;
 
-public class MusicManager implements IMusicManager {
+public class MusicManager extends EmptyMusicManager {
     protected final HashMap<String, IMusic> map = new HashMap<>();
     protected final HashMap<UUID, String> entityMap = new HashMap<>();
 

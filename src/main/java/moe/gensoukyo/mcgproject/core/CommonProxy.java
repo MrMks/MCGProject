@@ -6,6 +6,7 @@ import moe.gensoukyo.mcgproject.common.feature.MoreBannerPatterns;
 import moe.gensoukyo.mcgproject.common.feature.WorldGuard;
 import moe.gensoukyo.mcgproject.common.feature.futuremc.FMBlock;
 import moe.gensoukyo.mcgproject.common.feature.kaginawa.EntityKaginawa;
+import moe.gensoukyo.mcgproject.common.feature.musicplayer.EmptyMusicManager;
 import moe.gensoukyo.mcgproject.common.feature.musicplayer.IMusicManager;
 import moe.gensoukyo.mcgproject.common.feature.musicplayer.MusicManager;
 import moe.gensoukyo.mcgproject.common.init.*;
@@ -56,7 +57,7 @@ public class CommonProxy {
     }
 
     public IMusicManager getMusicManager(){
-        if (musicManager == null) musicManager = new MusicManager();
+        if (musicManager == null) musicManager = new EmptyMusicManager();
         return musicManager;
     }
 

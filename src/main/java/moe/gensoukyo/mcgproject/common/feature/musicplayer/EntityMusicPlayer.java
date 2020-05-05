@@ -16,6 +16,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.management.UserListOps;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumHand;
@@ -28,6 +29,10 @@ import javax.annotation.Nonnull;
 import java.net.URL;
 import java.util.ArrayList;
 
+/**
+ * @author SQwatermark
+ * @author MrMks 改写
+ */
 @MCGEntity("music_player")
 public class EntityMusicPlayer extends EntityMinecart {
 
@@ -37,20 +42,21 @@ public class EntityMusicPlayer extends EntityMinecart {
     private static final DataParameter<Float> VOLUME = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.FLOAT);
     private static final DataParameter<Boolean> IMMERSIVE = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.BOOLEAN);
 
-    public boolean isPlaying;
-    public String streamURL = "";
-    public float volume = 1.0f;
-    public String owner = "";
-    public boolean immersive;
+    private boolean isPlaying = false;
+    private String streamURL = "";
+    private float volume = 1.0f;
+    private String owner = "";
+    private boolean immersive = false;
 
-    public String musicCode;
+    private String musicCode = null;
+    private EntityPlayer user;
 
     public EntityMusicPlayer(World worldIn) {
         super(worldIn);
     }
 
-    public EntityMusicPlayer(World worldIn, double x, double y, double z) {
-        this(worldIn);
+    public EntityMusicPlayer(World worldIn, double x, double y, double z, String owner) {
+        super(worldIn);
         this.setPosition(x, y, z);
         this.motionX = 0.0D;
         this.motionY = 0.0D;
@@ -58,6 +64,7 @@ public class EntityMusicPlayer extends EntityMinecart {
         this.prevPosX = x;
         this.prevPosY = y;
         this.prevPosZ = z;
+        dataManager.set(OWNER, owner);
     }
 
     @Override
@@ -81,7 +88,12 @@ public class EntityMusicPlayer extends EntityMinecart {
     public Type getType() {
         return Type.RIDEABLE;
 	}
-	
+
+    @Override
+    protected boolean canBeRidden(@NotNull Entity entityIn) {
+        return false;
+    }
+
     @Nonnull
     public IBlockState getDefaultDisplayTile() {
         return Blocks.JUKEBOX.getDefaultState();
@@ -95,8 +107,8 @@ public class EntityMusicPlayer extends EntityMinecart {
                 return false;
             }
             EntityPlayer player = (EntityPlayer)source;
-            this.owner = dataManager.get(OWNER);
-            if(checkPermission(player)) {
+            //this.owner = dataManager.get(OWNER);
+            if(user == null && checkPermission(player)) {
                 this.setDead();
             }
             return true;
@@ -115,16 +127,17 @@ public class EntityMusicPlayer extends EntityMinecart {
     public void onUpdate() {
         super.onUpdate();
         if (!world.isRemote) {
-            String url = dataManager.get(URL);
-
-        }
-        if (world.isRemote && this.ticksExisted % 5 == 0) {
+            if (user instanceof EntityPlayerMP) {
+                EntityPlayerMP playerMP = (EntityPlayerMP) user;
+                if (playerMP.hasDisconnected()) user = null;
+            } else user = null;
+        } else if (this.ticksExisted % 5 == 0) {
             this.immersive = this.dataManager.get(IMMERSIVE);
+
             boolean d_isPlaying = dataManager.get(IS_PLAYING);
             if (isPlaying && !d_isPlaying) {
                 this.stopStream();
             } else if (!isPlaying && d_isPlaying) {
-                this.streamURL = this.dataManager.get(URL);
                 this.startStream();
             }
             IMusicManager manager = MCGProject.proxy.getMusicManager();
@@ -160,21 +173,35 @@ public class EntityMusicPlayer extends EntityMinecart {
         this.dataManager.set(IMMERSIVE, immersive);
     }
 
-    public void startStream() {
-        if (!this.isPlaying) {
-            this.isPlaying = true;
-            IMusicManager manager = MCGProject.proxy.getMusicManager();
-            manager.closeAll(getUniqueID());
-            manager.playNew(getUniqueID(), ()->new URL(streamURL).openStream(), world, posX, posY, posZ);
-            manager.changeMaxVolume(musicCode, 0);
-            manager.updateVolume(musicCode);
+    /**
+     * This method should only invoke on client, or this method will do nothing
+     */
+    private void startStream() {
+        if (world.isRemote) {
+            if (!this.isPlaying) {
+                this.isPlaying = true;
+                this.streamURL = dataManager.get(URL);
+                this.volume = dataManager.get(VOLUME);
+                IMusicManager manager = MCGProject.proxy.getMusicManager();
+                manager.closeAll(getUniqueID());
+                musicCode = manager.playNew(getUniqueID(), ()->new URL(streamURL).openStream(), world, posX, posY, posZ);
+                manager.changeMaxVolume(musicCode, volume);
+                manager.updateVolume(musicCode);
+            }
         }
     }
 
-    public void stopStream() {
-        if (this.isPlaying) {
-            this.isPlaying = false;
-            MCGProject.proxy.getMusicManager().closeAll(getUniqueID());
+    /**
+     * This method should only invoke on client, or this method will do nothing
+     */
+    private void stopStream() {
+        if (world.isRemote) {
+            if (this.isPlaying) {
+                this.isPlaying = false;
+                MCGProject.proxy.getMusicManager().closeAll(getUniqueID());
+                this.musicCode = null;
+                this.streamURL = "";
+            }
         }
     }
 
@@ -183,11 +210,14 @@ public class EntityMusicPlayer extends EntityMinecart {
         if (world.isRemote) {
             this.owner = dataManager.get(OWNER);
         } else {
-            if (!checkPermission(entityPlayer)) {
+            if (user != null || !checkPermission(entityPlayer)) {
                 entityPlayer.sendMessage(new TextComponentString("已锁定"));
                 return true;
             } else {
-                NetworkWrapper.INSTANCE.sendTo(new MusicPlayerGuiPacket(this), (EntityPlayerMP)entityPlayer);
+                // this should always be true since world.isRemote is false
+                if (entityPlayer instanceof EntityPlayerMP) {
+                    NetworkWrapper.INSTANCE.sendTo(new MusicPlayerGuiPacket(this), (EntityPlayerMP)entityPlayer);
+                }
             }
         }
         return true;
@@ -219,30 +249,49 @@ public class EntityMusicPlayer extends EntityMinecart {
     }
 
     public boolean checkPermission(EntityPlayer player) {
-        if (player.getName().equals(this.owner) || this.owner.isEmpty()) return true;
-        else if (player.getServer() != null && player.getServer().isDedicatedServer()) {
-            UserListOps ops = player.getServer().getPlayerList().getOppedPlayers();
-            ArrayList<String> list = Lists.newArrayList(ops.getKeys());
-            return list.contains(player.getName());
+        this.owner = dataManager.get(OWNER);
+        if (player == null) return false;
+        else if (player.getName().equals(this.owner) || this.owner.isEmpty()) return true;
+        else if (player.getServer() != null) {
+            MinecraftServer server = player.getServer();
+            if (server.isDedicatedServer()) {
+                UserListOps ops = player.getServer().getPlayerList().getOppedPlayers();
+                ArrayList<String> list = Lists.newArrayList(ops.getKeys());
+                return list.contains(player.getName());
+            } else {
+                return player.isCreative();
+            }
         }
         return false;
     }
 
     /**
-     * @author MrMks
-     * 注意，isPlaying() 指示 这个实体在逻辑服务端是否正在播放音频，而并非本地是否正在播放音频
-     * 故此当本地音频完全播放并结束后，该值仍为true
-     * @return true if the entity is playing audio on logic server
+     *
+     * @return dataManager#get(IS_PLAYING), 返回同步的数据
      */
     public boolean isPlaying(){
-        return isPlaying && dataManager.get(IS_PLAYING);
+        return dataManager.get(IS_PLAYING);
     }
 
     public String getOwner(){
-        return owner == null ? "" : owner;
+        return dataManager.get(OWNER);
     }
 
+    public float getVolume() {
+        return dataManager.get(VOLUME);
+    }
 
+    public String getStreamURL() {
+        return dataManager.get(URL);
+    }
+
+    public boolean isImmersive() {
+        return dataManager.get(IMMERSIVE);
+    }
+
+    public void onUserExit(EntityPlayer player) {
+        if (player == user) user = null;
+    }
 
     //TODO：bgm模式（到达位置播放）和dj模式(同步播放) DISCARD
 

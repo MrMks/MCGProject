@@ -21,7 +21,7 @@ public class RenderMusicPlayer extends RenderMinecart<EntityMusicPlayer> {
 
     @Override
     public boolean shouldRender(EntityMusicPlayer livingEntity, ICamera camera, double camX, double camY, double camZ) {
-        if (livingEntity.immersive && !(Minecraft.getMinecraft().player.getHeldItemMainhand().getItem() instanceof ItemMusicPlayer)) return false;
+        if (livingEntity.isImmersive() && !(Minecraft.getMinecraft().player.getHeldItemMainhand().getItem() instanceof ItemMusicPlayer)) return false;
         return super.shouldRender(livingEntity, camera, camX, camY, camZ);
     }
 }
