@@ -52,7 +52,7 @@ class MusicPlayer extends PlaybackListener implements Runnable {
 			player = new AdvancedPlayer(music.openStream(), device);
 			player.setPlayBackListener(this);
 			// 播放时，线程会卡在这里，直到停止播放
-			player.play(start, Integer.MAX_VALUE);
+			player.play(music.getStart(), Integer.MAX_VALUE);
 			isPlaying = false;
 		} catch (Exception ignored) {}
 	}
