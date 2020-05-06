@@ -84,6 +84,11 @@ public class GuiMusicPlayer extends GuiScreen {
 		}
 		buttonList.add(new GuiButton(6, var1 + gui_width - 296, var2 - 10, 43, 10, "随机"));
 		buttonList.add(new GuiButton(7, var1 + gui_width - 242, var2 - 10, 43, 10, "沉浸"));
+		if (musicPlayer.isSync()) {
+			buttonList.add(new GuiButton(8, var1 + gui_width - 190, var2 - 10, 43, 10, "已同步"));
+		} else {
+			buttonList.add(new GuiButton(8, var1 + gui_width - 190, var2 - 10, 43, 10, "未同步"));
+		}
 	}
 
 	@Override
@@ -222,11 +227,14 @@ public class GuiMusicPlayer extends GuiScreen {
 		boolean imm = musicPlayer.isImmersive();
 		float volume = musicPlayer.getVolume();
 
-		boolean update = false;
+		boolean isSync = musicPlayer.isSync();
 
+		boolean update = false;
+		boolean validateUrl = false;
 		if (button.id == 0) {
 			isPlaying = !isPlaying;
 			update = true;
+			validateUrl = true;
 		}
 		else if (button.id == 1) {
 			Toolkit toolkit = Toolkit.getDefaultToolkit();
@@ -265,22 +273,34 @@ public class GuiMusicPlayer extends GuiScreen {
 			imm = !imm;
 			update = true;
 		}
+		else if (button.id == 8) {
+			if (isPlaying) return;
+			else {
+				isSync = !isSync;
+				update = true;
+				button.displayString = isSync ? "已同步" : "未同步";
+			}
+		}
 
 		if (update) {
 			if (isPlaying) {
-				async_checking.set(true);
-				float finalVolume = volume;
-				String finalOwner = owner;
-				boolean finalImm = imm;
-				asyncValidate(new ValidateStreamImpl(url), ((valid, tickLength) -> {
-					if (valid)
-						NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(entityId, true, url, finalVolume, finalOwner, finalImm));
-					async_checking.set(false);
-				}));
+				if (validateUrl) {
+					async_checking.set(true);
+					float finalVolume = volume;
+					String finalOwner = owner;
+					boolean finalImm = imm;
+					boolean finalIsSync = isSync;
+					asyncValidate(new ValidateStreamImpl(url), ((valid, tickLength) -> {
+						if (valid)
+							NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(entityId, true, url, finalVolume, finalOwner, finalImm, finalIsSync, tickLength));
+						async_checking.set(false);
+					}));
+				} else {
+					NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(entityId, true, url, volume, owner, imm, isSync, -1));
+				}
 			} else {
-				NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(entityId, false, url, volume, owner, imm));
+				NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(entityId, false, url, volume, owner, imm, isSync, 0));
 			}
-
 		}
 	}
 
@@ -392,7 +412,7 @@ public class GuiMusicPlayer extends GuiScreen {
 			int ticks = 0;
 			try (InputStream inputStream = stream.openStream()){
 				Header header = new Bitstream(inputStream).readFrame();
-				ticks = MathHelper.ceil(header.total_ms(stream.getStreamSize()) * 20);
+				ticks = MathHelper.ceil(header.total_ms(stream.getStreamSize()) * 20 / 1000);
 				valid = true;
 			} catch (IOException | BitstreamException e){
 				e.printStackTrace();

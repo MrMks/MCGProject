@@ -1,15 +1,21 @@
 package moe.gensoukyo.mcgproject.cilent.feature.musicPlayer;
 
+import javazoom.jl.decoder.Bitstream;
+import javazoom.jl.decoder.BitstreamException;
+import javazoom.jl.decoder.Header;
 import moe.gensoukyo.mcgproject.common.feature.musicplayer.IMusic;
 import moe.gensoukyo.mcgproject.common.feature.musicplayer.IStream;
 import moe.gensoukyo.mcgproject.common.feature.musicplayer.MusicManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -55,6 +61,14 @@ public class ClientMusicManager extends MusicManager {
     public String playNew(UUID uuid, IStream stream, World world, double x, double y, double z, int start) {
         if (entityMap.containsKey(uuid)) playerMap.remove(entityMap.get(uuid)).requestStop();
 
+        start = start / 20 * 1000;
+        try (InputStream inputStream = stream.openStream()) {
+            Header header = new Bitstream(inputStream).readFrame();
+            start = MathHelper.ceil(start / header.ms_per_frame()) + 1;
+        } catch (IOException | BitstreamException ignore){
+        } finally {
+            start = Math.max(0,start);
+        }
         String hash = super.playNew(uuid, stream, world, x, y, z, start);
         MusicPlayer player = new MusicPlayer(hash, map.get(hash));
         thread.add(player);

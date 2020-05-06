@@ -42,6 +42,9 @@ public class EntityMusicPlayer extends EntityMinecart {
     private static final DataParameter<Float> VOLUME = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.FLOAT);
     private static final DataParameter<Boolean> IMMERSIVE = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.BOOLEAN);
 
+    private static final DataParameter<Boolean> SYNC = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.BOOLEAN);
+    private static final DataParameter<Integer> SYNCED_START = EntityDataManager.createKey(EntityMusicPlayer.class, DataSerializers.VARINT);
+
     private boolean isPlaying = false;
     private String streamURL = "";
     private float volume = 1.0f;
@@ -50,6 +53,10 @@ public class EntityMusicPlayer extends EntityMinecart {
 
     private String musicCode = null;
     private EntityPlayer user;
+
+    private boolean isSync = false;
+    private int synced_start = 0;
+    private int maxTicks;
 
     public EntityMusicPlayer(World worldIn) {
         super(worldIn);
@@ -75,6 +82,9 @@ public class EntityMusicPlayer extends EntityMinecart {
         dataManager.register(OWNER, "");
         dataManager.register(VOLUME, 1.0F);
         dataManager.register(IMMERSIVE, false);
+
+        dataManager.register(SYNC, false);
+        dataManager.register(SYNCED_START, 0);
     }
 
     @Override
@@ -131,6 +141,16 @@ public class EntityMusicPlayer extends EntityMinecart {
                 EntityPlayerMP playerMP = (EntityPlayerMP) user;
                 if (playerMP.hasDisconnected()) user = null;
             } else user = null;
+            if (isPlaying() && isSync()) {
+                synced_start++;
+                dataManager.set(SYNCED_START, synced_start);
+                if (synced_start > maxTicks + 1) {
+                    synced_start = 0;
+                    isPlaying = false;
+                    dataManager.set(IS_PLAYING, false);
+                    dataManager.set(SYNCED_START, synced_start);
+                }
+            }
         } else if (this.ticksExisted % 5 == 0) {
             this.immersive = this.dataManager.get(IMMERSIVE);
 
@@ -160,7 +180,7 @@ public class EntityMusicPlayer extends EntityMinecart {
         super.applyEntityCollision(entityIn);
     }
 
-    public void receivePacket(String url, boolean playing, float volume, String owner, boolean immersive) {
+    public void receivePacket(String url, boolean playing, float volume, String owner, boolean immersive, boolean isSync, int ticks) {
         this.streamURL = url;
         this.isPlaying = playing;
         this.owner = owner;
@@ -171,6 +191,11 @@ public class EntityMusicPlayer extends EntityMinecart {
         this.dataManager.set(OWNER, owner);
         this.dataManager.set(VOLUME, volume);
         this.dataManager.set(IMMERSIVE, immersive);
+        this.isSync = isSync;
+        this.synced_start = 0;
+        this.dataManager.set(SYNC, isSync);
+        this.dataManager.set(SYNCED_START, 0);
+        this.maxTicks = ticks == -1 ? maxTicks : ticks;
     }
 
     /**
@@ -182,9 +207,10 @@ public class EntityMusicPlayer extends EntityMinecart {
                 this.isPlaying = true;
                 this.streamURL = dataManager.get(URL);
                 this.volume = dataManager.get(VOLUME);
+                this.synced_start = dataManager.get(SYNCED_START);
                 IMusicManager manager = MCGProject.proxy.getMusicManager(world.isRemote);
                 manager.closeAll(getUniqueID());
-                musicCode = manager.playNew(getUniqueID(), ()->new URL(streamURL).openStream(), world, posX, posY, posZ);
+                musicCode = manager.playNew(getUniqueID(), ()->new URL(streamURL).openStream(), world, posX, posY, posZ,synced_start);
                 manager.changeMaxVolume(musicCode, volume);
                 manager.updateVolume(musicCode);
             }
@@ -231,6 +257,10 @@ public class EntityMusicPlayer extends EntityMinecart {
         nbttagcompound.setString("owner", this.owner);
         nbttagcompound.setFloat("volume", this.volume);
         nbttagcompound.setBoolean("immersive", this.immersive);
+
+        nbttagcompound.setBoolean("isSync", this.isSync);
+        nbttagcompound.setInteger("maxTicks", this.maxTicks);
+        nbttagcompound.setInteger("ticked", this.synced_start);
     }
 
     @Override
@@ -246,6 +276,12 @@ public class EntityMusicPlayer extends EntityMinecart {
         this.dataManager.set(OWNER, owner);
         this.dataManager.set(VOLUME, volume);
         this.dataManager.set(IMMERSIVE, immersive);
+
+        this.isSync = nbttagcompound.getBoolean("isSync");
+        this.maxTicks = nbttagcompound.getInteger("maxTicks");
+        this.synced_start = nbttagcompound.getInteger("ticked");
+        this.dataManager.set(SYNC, isSync);
+        this.dataManager.set(SYNCED_START, synced_start);
     }
 
     public boolean checkPermission(EntityPlayer player) {
@@ -287,6 +323,14 @@ public class EntityMusicPlayer extends EntityMinecart {
 
     public boolean isImmersive() {
         return dataManager.get(IMMERSIVE);
+    }
+
+    public boolean isSync(){
+        return dataManager.get(SYNC);
+    }
+
+    public int getSyncStart(){
+        return dataManager.get(SYNCED_START);
     }
 
     public void onUserExit(EntityPlayer player) {

@@ -22,15 +22,20 @@ public class MusicPlayerPacket implements IMessage {
 	String owner;
 	boolean immersive;
 
+	boolean isSync;
+	int ticks;
+
 	public MusicPlayerPacket() {}
 
-	public MusicPlayerPacket(int entityID, boolean isPlaying, String url, float volume, String owner, boolean immersive) {
+	public MusicPlayerPacket(int entityID, boolean isPlaying, String url, float volume, String owner, boolean immersive, boolean isSync, int ticks) {
 		this.entityID = entityID;
 		this.isPlaying = isPlaying;
 		this.url = url;
 		this.volume = volume;
 		this.owner = owner;
 		this.immersive = immersive;
+		this.isSync = isSync;
+		this.ticks = ticks;
 	}
 
 	/*
@@ -53,6 +58,8 @@ public class MusicPlayerPacket implements IMessage {
 		this.immersive = buf.readBoolean();
 		this.url = ByteBufUtils.readUTF8String(buf);
 		this.owner = ByteBufUtils.readUTF8String(buf);
+		this.isSync = buf.readBoolean();
+		this.ticks = buf.readInt();
 	}
 
 	@Override
@@ -63,5 +70,7 @@ public class MusicPlayerPacket implements IMessage {
 		buf.writeBoolean(this.immersive);
 		ByteBufUtils.writeUTF8String(buf, this.url);
 		ByteBufUtils.writeUTF8String(buf, this.owner);
+		buf.writeBoolean(isSync);
+		buf.writeInt(ticks);
 	}
 }
