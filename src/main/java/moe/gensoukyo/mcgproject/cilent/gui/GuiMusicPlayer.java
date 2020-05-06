@@ -1,5 +1,8 @@
 package moe.gensoukyo.mcgproject.cilent.gui;
 
+import javazoom.jl.decoder.Bitstream;
+import javazoom.jl.decoder.BitstreamException;
+import javazoom.jl.decoder.Header;
 import moe.gensoukyo.mcgproject.common.feature.musicplayer.EntityMusicPlayer;
 import moe.gensoukyo.mcgproject.common.network.MusicPlayerGuiClosePackage;
 import moe.gensoukyo.mcgproject.common.network.MusicPlayerPacket;
@@ -13,6 +16,7 @@ import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.input.Keyboard;
@@ -20,13 +24,12 @@ import org.lwjgl.input.Keyboard;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Information(author = "EternalBlueFlame, SQwatermark", licence = "The MIT License", source = "https://github.com/EternalBlueFlame/Traincraft-5")
 @SideOnly(Side.CLIENT)
@@ -208,8 +211,10 @@ public class GuiMusicPlayer extends GuiScreen {
 	 * 相应的数据检查及操作将在EntityMusicPlayer#onUpdate()中进行。
 	 * @see EntityMusicPlayer
 	 */
+	private final AtomicBoolean async_checking = new AtomicBoolean(false);
 	@Override
 	protected void actionPerformed(GuiButton button) {
+		if (async_checking.get()) return;
 		boolean isPlaying = musicPlayer.isPlaying();
 		int entityId = musicPlayer.getEntityId();
 		String url = parseURL(streamTextBox.getText());
@@ -261,8 +266,22 @@ public class GuiMusicPlayer extends GuiScreen {
 			update = true;
 		}
 
-		if (update)
-			NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(entityId, isPlaying, url, volume, owner, imm));
+		if (update) {
+			if (isPlaying) {
+				async_checking.set(true);
+				float finalVolume = volume;
+				String finalOwner = owner;
+				boolean finalImm = imm;
+				asyncValidate(new ValidateStreamImpl(url), ((valid, tickLength) -> {
+					if (valid)
+						NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(entityId, true, url, finalVolume, finalOwner, finalImm));
+					async_checking.set(false);
+				}));
+			} else {
+				NetworkWrapper.INSTANCE.sendToServer(new MusicPlayerPacket(entityId, false, url, volume, owner, imm));
+			}
+
+		}
 	}
 
 	// Unused?
@@ -367,6 +386,38 @@ public class GuiMusicPlayer extends GuiScreen {
 		return input;
 	}
 
+	private void asyncValidate(IValidateStream stream, IValidateCallBack callBack){
+		new Thread(()->{
+			boolean valid = false;
+			int ticks = 0;
+			try (InputStream inputStream = stream.openStream()){
+				Header header = new Bitstream(inputStream).readFrame();
+				ticks = MathHelper.ceil(header.total_ms(stream.getStreamSize()) * 20);
+				valid = true;
+			} catch (IOException | BitstreamException e){
+				e.printStackTrace();
+			} finally {
+				callBack.onValidated(valid, ticks);
+			}
+		}).start();
+	}
+
+	private static class ValidateStreamImpl implements IValidateStream {
+
+		private final String url;
+		ValidateStreamImpl(String url) {
+			this.url = url;
+		}
+		@Override
+		public int getStreamSize() throws IOException {
+			return new URL(url).openConnection().getContentLength();
+		}
+
+		@Override
+		public InputStream openStream() throws IOException {
+			return new URL(url).openStream();
+		}
+	}
 }
 
 //TODO use localization Key instead hard-code

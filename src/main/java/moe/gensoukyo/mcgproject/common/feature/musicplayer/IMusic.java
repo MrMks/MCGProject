@@ -5,7 +5,7 @@ import net.minecraft.world.World;
 import java.io.IOException;
 import java.io.InputStream;
 
-public interface IMusic {
+public interface IMusic extends IStream{
     void update(World world, double x, double y, double z);
     InputStream openStream() throws IOException;
     void setMaxVolume(float max);
