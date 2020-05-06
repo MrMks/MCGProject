@@ -51,7 +51,7 @@ public class Music implements IMusic {
                 v = distanceSq / 4 / nn;
             }
             else if (distanceSq > 16 * nn) {
-                v = 0;
+                v = 1;
             }
             else {
                 v = (float) (- distanceSq / 12 / nn + 2 * Math.sqrt(distanceSq) / 3 / n - 1 / 3.0);
