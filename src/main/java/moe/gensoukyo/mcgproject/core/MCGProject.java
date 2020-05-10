@@ -4,6 +4,7 @@ import moe.gensoukyo.mcgproject.common.feature.NoRecipeBook;
 import moe.gensoukyo.mcgproject.common.feature.backpack.BackpackCore;
 import moe.gensoukyo.mcgproject.common.feature.rsgauges.ModRsGauges;
 import moe.gensoukyo.mcgproject.common.feature.sticker.TileSticker;
+import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fml.common.Mod;
@@ -28,10 +29,13 @@ public class MCGProject {
 
     public static final String ID = "mcgproject";
     public static final String NAME = "MCGProject";
-    public static final String VERSION = "1.1.5";
+    public static final String VERSION = "1.1.6";
 
     public static Logger logger;
     public static File modConfigDi;
+
+    //服务端事件用
+    private MinecraftServer server;
 
     @SuppressWarnings("unused")
     public static final String[] CODERS = {"SQwatermark", "drzzm32", "Chloe_koopa"};
@@ -58,23 +62,20 @@ public class MCGProject {
     }
 
     @Mod.EventHandler
-    public void init(FMLInitializationEvent event)
-    {
+    public void init(FMLInitializationEvent event) {
         proxy.init(event);
-
         ModRsGauges.INSTANCE.attachLogger(event);
     }
 
     @Mod.EventHandler
-    public void postInit(FMLPostInitializationEvent event)
-    {
+    public void postInit(FMLPostInitializationEvent event) {
         proxy.postInit(event);
-
         ModRsGauges.INSTANCE.postInit(event);
     }
 
     @Mod.EventHandler
     public void serverLoad(FMLServerStartingEvent event) {
+        server = event.getServer();
         event.registerServerCommand(new BackpackCore.BackpackCommand());
         event.registerServerCommand(new BackpackCore.BackpackManageCommand());
         event.registerServerCommand(new TileSticker.RefreshCommand());
@@ -94,6 +95,14 @@ public class MCGProject {
         MinecraftForge.EVENT_BUS.register(new NoRecipeBook());
     }
 
+    @Mod.EventHandler
+    public void serverStop(FMLServerStoppingEvent event) {
+        if (server.isDedicatedServer()) { //独立服务端关闭处理
+            MCGProject.logger.info("Closing something...");
+
+        }
+
+    }
 
     //TODO: 音效方块
     //TODO: 图书馆
@@ -101,5 +110,6 @@ public class MCGProject {
     //TODO: 玩家在其中会下陷的泥巴（沼泽）
     //TODO: 水子的石头
     //TODO: 恐龙和普通生物的模型
+    //TODO: 狐火
 
 }
