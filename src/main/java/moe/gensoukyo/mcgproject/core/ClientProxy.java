@@ -2,10 +2,12 @@ package moe.gensoukyo.mcgproject.core;
 
 import moe.gensoukyo.mcgproject.cilent.feature.CustomMainMenu;
 import moe.gensoukyo.mcgproject.cilent.feature.ItitFeatures;
+import moe.gensoukyo.mcgproject.cilent.feature.musicPlayer.ClientMusicManager;
 import moe.gensoukyo.mcgproject.cilent.init.ModelMapper;
 import moe.gensoukyo.mcgproject.common.feature.hackychat.ClientCmdHacker;
 import moe.gensoukyo.mcgproject.common.feature.hackychat.FilteredChatHandler;
 import moe.gensoukyo.mcgproject.common.feature.hackychat.CmdFilteredChat;
+import moe.gensoukyo.mcgproject.common.feature.musicplayer.IMusicManager;
 import moe.gensoukyo.mcgproject.common.feature.rsgauges.ModRsGauges;
 import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.common.MinecraftForge;
@@ -65,4 +67,9 @@ public class ClientProxy extends CommonProxy {
         ModRsGauges.client.postInit(event);
     }
 
+    @Override
+    public IMusicManager getMusicManager(boolean isRemote) {
+        if (musicManager == null) musicManager = new ClientMusicManager();
+        return super.getMusicManager(isRemote);
+    }
 }
